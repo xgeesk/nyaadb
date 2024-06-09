@@ -8,5 +8,8 @@
 	"dependencies": {
 		"@tinyhttp/app": "latest",
 		"nocodb": "latest"
+	},
+	"overrides": {
+		"xlsx": "./local/xlsx"
 	}
 }
