@@ -1,44 +1,36 @@
-const parser = new DOMParser()
+import { Noco } from './noco.js'
+import { getDoc, parseListPage, parseItemPage } from './utils.js'
 
-/** @param {string} path */
-export const getDoc = async (path) => {
-	const r = await fetch(path)
-	return parser.parseFromString(await r.text(), 'text/html')
-}
+const smol = ({ id, seeders, leechers }) => ({ id, seeders, leechers })
 
-/** @param {Document} doc */
-export function* parseListPage(doc, full = false) {
-	for (const row of doc.querySelectorAll('tr')) {
-		const [f, ...td] = row.querySelectorAll('td')
-		if (!f) continue
-		const tt = td[0].querySelector('a')
-		yield {
-			id: parseInt(tt.href.split('/').at(-1)),
-			seeders: parseInt(td[4].innerText),
-			leechers: parseInt(td[5].innerText),
-			...(full
-				? {
-						added: new Date(parseInt(td[3].dataset.timestamp) * 1000),
-						title: tt.innerText,
-						info: {
-							sz: td[2].innerText,
-							ml: td[1].querySelector('a:nth-child(2)').href,
-						},
-				  }
-				: null),
-		}
+export async function* updatePages(opts) {
+	const noco = Noco(opts)
+	for (let i = 1; i < 90; ++i) {
+		const items = [...parseListPage(await getDoc(`/user/offkab?p=${i}`), true)]
+		const ids = items.map((i) => i.id)
+		const w = `(id,btw,${Math.min(...ids)},${Math.max(...ids)})`
+		const existQuery = await noco.get({ w, f: 'id', l: 100 })
+		const haveIds = new Set(existQuery.list.map((i) => i.id))
+		const grouped = Map.groupBy(items, (i) => (haveIds.has(i.id) ? 1 : 0))
+		const newItems = grouped.get(0) ?? []
+		if (newItems.length) await noco.post(newItems)
+		const updItems = grouped.get(1) ?? []
+		if (updItems.length) await noco.patch(updItems.map(smol))
+		yield { page: i, query: w, new: newItems.length, upd: updItems.length }
 	}
 }
 
-/** @param {Document} doc */
-export const getItemPage = (doc) => {
-	const [se, le] = doc.querySelectorAll('div > span')
-	return {
-		seeders: parseInt(se.innerText),
-		leechers: parseInt(le.innerText),
-		info: {
-			ml: doc.querySelector('a.card-footer-item').href,
-			cid: doc.querySelector('#torrent-description').innerText.match(/\n品番：\s*(.+)\s/)?.[1],
-		},
+export async function* updateItems(opts) {
+	const noco = Noco(opts)
+	while (true) {
+		const resp = await noco.get({ viewId: opts.view, f: 'id,info' })
+		if (!resp.list.length) break
+		for (const { id, info } of resp.list) {
+			const pg = parseItemPage(await getDoc(`/view/${id}`))
+			await noco.patch([
+				{ id, ...pg, info: { ...info, ...pg.info } }
+			])
+			yield { id }
+		}
 	}
 }
