@@ -6,10 +6,5 @@
 		"start": "node server.js"
 	},
 	"dependencies": {
-		"@tinyhttp/app": "latest",
-		"nocodb": "latest"
-	},
-	"overrides": {
-		"xlsx": "./local/xlsx"
 	}
 }
