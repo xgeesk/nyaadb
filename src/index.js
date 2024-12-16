@@ -1,6 +1,7 @@
 import { Noco } from './noco.js'
 import { getDoc, parseListPage, parseItemPage } from './utils.js'
 
+const UNSC_RE = /1pon|heyzo|carib/i
 const smol = ({ id, seeders, leechers }) => ({ id, seeders, leechers })
 
 export async function* updatePages(opts) {
@@ -11,7 +12,12 @@ export async function* updatePages(opts) {
 		const w = `(id,btw,${Math.min(...ids)},${Math.max(...ids)})`
 		const existQuery = await noco.get({ w, f: 'id', l: 100 })
 		const haveIds = new Set(existQuery.list.map((i) => i.id))
-		const grouped = Map.groupBy(items, (i) => (haveIds.has(i.id) ? 1 : 0))
+		const filtered = items.filter(({ title }) => {
+			if (!title || title.startsWith('+++ [FHD]')) return true
+			if (title.startsWith('+++ [FHDC]') || title.startsWith('+++ [FHDCJ]')) return false
+			return UNSC_RE.test(title)
+		})
+		const grouped = Map.groupBy(filtered, (i) => (haveIds.has(i.id) ? 1 : 0))
 		const newItems = grouped.get(0) ?? []
 		if (newItems.length) await noco.post(newItems)
 		const updItems = grouped.get(1) ?? []
