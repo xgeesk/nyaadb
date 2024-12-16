@@ -23,14 +23,15 @@ export async function* updatePages(opts) {
 export async function* updateItems(opts) {
 	const noco = Noco(opts)
 	while (true) {
-		const resp = await noco.get({ viewId: opts.view, f: 'id,info' })
+		const resp = await noco.get({ viewId: opts.view, f: 'id,info', l: 5 })
 		if (!resp.list.length) break
+		const batch = []
 		for (const { id, info } of resp.list) {
-			const pg = parseItemPage(await getDoc(`/view/${id}`))
-			await noco.patch([
-				{ id, ...pg, info: { ...info, ...pg.info } }
-			])
 			yield { id }
+			const pg = parseItemPage(await getDoc(`/view/${id}`))
+			const ori = typeof info === 'string' ? JSON.parse(info) : info
+			batch.push({ id, ...pg, info: { ...ori, ...pg.info } })
 		}
+		await noco.patch(batch)
 	}
 }
