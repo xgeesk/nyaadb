@@ -36,7 +36,7 @@ export async function* updateItems(opts) {
 		const batch = []
 		for (const { id, info } of resp.list) {
 			yield { id }
-			const pg = parseItemPage(await getDoc(`/view/${id}`, !!opts.full))
+			const pg = parseItemPage(await getDoc(`/view/${id}`), !!opts.full)
 			const ori = typeof info === 'string' ? JSON.parse(info) : info
 			batch.push({ id, ...pg, info: { ...ori, ...pg.info } })
 		}
