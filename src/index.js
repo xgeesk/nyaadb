@@ -6,7 +6,7 @@ const smol = ({ id, seeders, leechers }) => ({ id, seeders, leechers })
 
 export async function* updatePages(opts) {
 	const noco = Noco(opts)
-	for (let i = 1; i < 90; ++i) {
+	for (let i = 1; i < 99; ++i) {
 		const items = [...parseListPage(await getDoc(`/user/offkab?p=${i}`), true)]
 		const ids = items.map((i) => i.id)
 		const w = `(id,btw,${Math.min(...ids)},${Math.max(...ids)})`
@@ -14,7 +14,9 @@ export async function* updatePages(opts) {
 		const haveIds = new Set(existQuery.list.map((i) => i.id))
 		const filtered = items.filter(({ title }) => {
 			if (!title || title.startsWith('+++ [FHD]')) return true
-			if (title.startsWith('+++ [FHDC]') || title.startsWith('+++ [FHDCJ]')) return false
+			if (title.startsWith('+++ [FHDC]') || title.startsWith('+++ [FHDCJ]')) {
+				return false
+			}
 			return UNSC_RE.test(title)
 		})
 		const grouped = Map.groupBy(filtered, (i) => (haveIds.has(i.id) ? 1 : 0))
@@ -34,7 +36,7 @@ export async function* updateItems(opts) {
 		const batch = []
 		for (const { id, info } of resp.list) {
 			yield { id }
-			const pg = parseItemPage(await getDoc(`/view/${id}`))
+			const pg = parseItemPage(await getDoc(`/view/${id}`, !!opts.full))
 			const ori = typeof info === 'string' ? JSON.parse(info) : info
 			batch.push({ id, ...pg, info: { ...ori, ...pg.info } })
 		}

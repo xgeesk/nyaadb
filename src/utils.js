@@ -31,14 +31,23 @@ export function* parseListPage(doc, full = false) {
 }
 
 /** @param {Document} doc */
-export const parseItemPage = (doc) => {
+export const parseItemPage = (doc, full = false) => {
 	const [se, le] = doc.querySelectorAll('div > span')
+	const ts = doc.querySelector('div[data-timestamp]').dataset.timestamp
 	return {
 		seeders: parseInt(se.innerText),
 		leechers: parseInt(le.innerText),
-		info: {
-			ml: doc.querySelector('a.card-footer-item').href,
-			cid: doc.querySelector('#torrent-description').innerText.match(/\n品番：\s*(.+)\s/)?.[1],
-		},
+		...(full
+			? {
+					added: new Date(parseInt(ts) * 1000),
+					title: doc.querySelector('h3.panel-title').innerText,
+					info: {
+						ml: doc.querySelector('a.card-footer-item').href,
+						cid: doc
+							.querySelector('#torrent-description')
+							.innerText.match(/\n品番：\s*(.+)\s/)?.[1],
+					},
+			  }
+			: null),
 	}
 }
